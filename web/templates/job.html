@@ -1,0 +1,125 @@
+{{define "title"}}{{.Job.Title}}{{end}}
+{{define "content"}}
+{{$job := .Job}}
+<div class="mb-6 flex flex-wrap items-start justify-between gap-4">
+  <div>
+    <a href="/" class="text-xs text-gray-500 hover:text-gray-700">← All jobs</a>
+    <h1 class="mt-1 text-xl font-semibold">{{$job.Title}}</h1>
+    <p class="mt-2 max-w-3xl text-gray-600">{{$job.Description}}</p>
+    <div class="mt-3 flex flex-wrap gap-1.5 text-xs">
+      {{range $job.MustHave}}<span class="rounded-md bg-teal-50 px-2 py-0.5 font-medium text-teal-700 ring-1 ring-teal-600/20">{{.}}</span>{{end}}
+      {{range $job.NiceToHave}}<span class="rounded-md bg-gray-50 px-2 py-0.5 text-gray-600 ring-1 ring-gray-500/20">{{.}}</span>{{end}}
+      <span class="rounded-md bg-gray-50 px-2 py-0.5 text-gray-600 ring-1 ring-gray-500/20">{{$job.MinYears}}+ years</span>
+    </div>
+  </div>
+  <div class="flex flex-wrap gap-2">
+    <a href="/jobs/{{$job.ID}}/export.csv" class="rounded-md bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm ring-1 ring-gray-300 hover:bg-gray-50">Export CSV</a>
+    {{if or $job.Failed (lt (add $job.Done (add $job.Pending $job.Failed)) $job.Total)}}
+    <form method="post" action="/jobs/{{$job.ID}}/retry"><button class="rounded-md bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm ring-1 ring-gray-300 hover:bg-gray-50">Screen again</button></form>
+    {{end}}
+    {{if $job.Pending}}
+    <form method="post" action="/jobs/{{$job.ID}}/cancel"><button class="rounded-md bg-rose-600 px-4 py-2 text-sm font-medium text-white hover:bg-rose-700">Cancel screening</button></form>
+    {{end}}
+  </div>
+</div>
+
+<div id="job-status" data-job="{{$job.ID}}" data-done="{{$job.Done}}" class="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+  <div class="rounded-lg bg-white p-4 shadow-sm ring-1 ring-gray-200"><p class="text-xs text-gray-500">Resumes</p><p class="mt-1 text-lg font-semibold" data-k="total">{{$job.Total}}</p></div>
+  <div class="rounded-lg bg-white p-4 shadow-sm ring-1 ring-gray-200"><p class="text-xs text-gray-500">Screened</p><p class="mt-1 text-lg font-semibold text-emerald-700" data-k="done">{{$job.Done}}</p></div>
+  <div class="rounded-lg bg-white p-4 shadow-sm ring-1 ring-gray-200"><p class="text-xs text-gray-500">In progress</p><p class="mt-1 text-lg font-semibold text-teal-700" data-k="pending">{{$job.Pending}}</p></div>
+  <div class="rounded-lg bg-white p-4 shadow-sm ring-1 ring-gray-200"><p class="text-xs text-gray-500">Failed</p><p class="mt-1 text-lg font-semibold text-rose-700" data-k="failed">{{$job.Failed}}</p></div>
+</div>
+<div id="new-results" class="mb-4 hidden rounded-lg border border-teal-200 bg-teal-50 px-4 py-3 text-teal-800">
+  New results are ready. <button type="button" data-reload class="font-semibold underline">Refresh the shortlist</button>
+</div>
+
+<div class="grid gap-6 lg:grid-cols-5">
+  <div class="space-y-6 lg:col-span-3">
+    <section class="rounded-lg bg-white shadow-sm ring-1 ring-gray-200">
+      <div class="flex items-center justify-between border-b border-gray-200 px-5 py-3">
+        <h2 class="text-lg font-semibold">Ranked shortlist</h2>
+        <span class="text-xs text-gray-500">Best match first</span>
+      </div>
+      {{if .Candidates}}
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+          <thead class="bg-gray-50">
+            <tr class="text-left text-xs uppercase tracking-wide text-gray-500">
+              <th class="px-4 py-2 font-medium">#</th>
+              <th class="px-4 py-2 font-medium">Candidate</th>
+              <th class="px-4 py-2 font-medium">Score</th>
+              <th class="px-4 py-2 font-medium">Must-have skills</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100">
+            {{$rank := 0}}
+            {{range .Candidates}}
+            <tr class="align-top odd:bg-white even:bg-gray-50/60 hover:bg-teal-50/40">
+              {{if eq .Status "done"}}
+              {{$rank = add $rank 1}}
+              <td class="px-4 py-3 text-gray-500">{{$rank}}</td>
+              <td class="px-4 py-3">
+                <a href="/candidates/{{.ID}}" class="font-medium text-gray-900 hover:text-teal-700">{{.Name}}</a>
+                <p class="text-xs text-gray-500">{{.CurrentTitle}} · {{f1 .Years}} yrs</p>
+                <p class="mt-1 max-w-md text-xs text-gray-600">{{.Summary}}</p>
+              </td>
+              <td class="px-4 py-3"><span class="inline-flex rounded-md px-2 py-1 text-sm font-semibold ring-1 {{scoreClass .Score}}">{{.Score}}</span></td>
+              <td class="px-4 py-3">
+                <div class="flex max-w-xs flex-wrap gap-1 text-xs">
+                  {{range .Matched}}<span class="rounded bg-emerald-50 px-1.5 py-0.5 text-emerald-700">✓ {{.}}</span>{{end}}
+                  {{range .Missing}}<span class="rounded bg-rose-50 px-1.5 py-0.5 text-rose-700">✗ {{.}}</span>{{end}}
+                </div>
+              </td>
+              {{else}}
+              <td class="px-4 py-3 text-gray-400">–</td>
+              <td class="px-4 py-3">
+                <p class="font-medium text-gray-700">{{.FileName}}</p>
+                {{if .Error}}<p class="text-xs text-rose-700">{{.Error}}</p>{{end}}
+              </td>
+              <td class="px-4 py-3" colspan="2"><span class="rounded-md px-2 py-1 text-xs font-medium {{statusClass .Status}}">{{.Status}}</span></td>
+              {{end}}
+            </tr>
+            {{end}}
+          </tbody>
+        </table>
+      </div>
+      {{else}}
+      <p class="p-10 text-center text-gray-500">No resumes yet. Upload some below.</p>
+      {{end}}
+    </section>
+
+    <section class="rounded-lg bg-white p-5 shadow-sm ring-1 ring-gray-200">
+      <h2 class="text-lg font-semibold">Upload resumes</h2>
+      <p class="mt-1 text-gray-600">PDF, TXT or MD. Up to {{.MaxFiles}} files, {{.MaxKB}} KB each. No resumes handy? <a href="/samples.zip" class="font-medium text-teal-700 underline">Download sample resumes</a>.</p>
+      <form method="post" action="/jobs/{{$job.ID}}/resumes" enctype="multipart/form-data" class="mt-4 flex flex-wrap items-center gap-3">
+        <input type="file" name="resumes" multiple required accept=".pdf,.txt,.md" class="text-sm file:mr-3 file:rounded-md file:border-0 file:bg-gray-100 file:px-4 file:py-2 file:text-sm file:font-medium hover:file:bg-gray-200">
+        <button class="rounded-md bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700">Upload and screen</button>
+      </form>
+    </section>
+  </div>
+
+  <aside class="lg:col-span-2">
+    <section class="flex h-[36rem] flex-col rounded-lg bg-white shadow-sm ring-1 ring-gray-200 lg:sticky lg:top-6">
+      <div class="border-b border-gray-200 px-5 py-3">
+        <h2 class="text-lg font-semibold">Ask about these resumes</h2>
+        <p class="text-xs text-gray-500">The AI searches the resumes first, then answers and names each candidate.</p>
+      </div>
+      <div id="chat-log" class="flex-1 space-y-4 overflow-y-auto px-5 py-4" aria-live="polite">
+        <div class="space-y-2">
+          <p class="text-xs font-medium text-gray-500">Try:</p>
+          <button type="button" data-q="Who are the top 3 candidates and why?" class="block w-full rounded-md bg-gray-50 px-3 py-2 text-left text-gray-700 ring-1 ring-gray-200 hover:bg-teal-50">Who are the top 3 candidates and why?</button>
+          {{with $job.NiceToHave}}{{$skill := index . 0}}
+          <button type="button" data-q="Who has experience with {{$skill}}?" class="block w-full rounded-md bg-gray-50 px-3 py-2 text-left text-gray-700 ring-1 ring-gray-200 hover:bg-teal-50">Who has experience with {{$skill}}?</button>
+          {{end}}
+          <button type="button" data-q="Which candidates have led or mentored a team?" class="block w-full rounded-md bg-gray-50 px-3 py-2 text-left text-gray-700 ring-1 ring-gray-200 hover:bg-teal-50">Which candidates have led or mentored a team?</button>
+        </div>
+      </div>
+      <form id="chat-form" data-job="{{$job.ID}}" class="flex gap-2 border-t border-gray-200 p-3">
+        <label for="chat-q" class="sr-only">Your question</label>
+        <input id="chat-q" maxlength="500" autocomplete="off" placeholder="e.g. Who has worked with Redis?" class="flex-1 rounded-md border-gray-300 text-sm focus:border-teal-500 focus:ring-teal-500">
+        <button class="rounded-md bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-50">Ask</button>
+      </form>
+    </section>
+  </aside>
+</div>
+{{end}}

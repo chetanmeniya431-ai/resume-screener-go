@@ -1,0 +1,15 @@
+# Use an Ollama container that already runs on this machine, on the Docker
+# network named in AI_NETWORK. Enable with, in .env:
+#   COMPOSE_FILE=docker-compose.yml:docker-compose.shared-ollama.yml
+#   COMPOSE_PROFILES=
+#   AI_NETWORK=<network the Ollama container is on>
+services:
+  app:
+    networks:
+      - default
+      - ai
+
+networks:
+  ai:
+    external: true
+    name: ${AI_NETWORK:?Set AI_NETWORK in .env}
