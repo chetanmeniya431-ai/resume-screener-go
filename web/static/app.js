@@ -78,7 +78,7 @@
           if (event === "sources") renderSources(sources, data);
           if (event === "token") {
             text += data;
-            answer.textContent = text;
+            answer.textContent = clean(text);
             answer.classList.remove("hidden");
             log.scrollTop = log.scrollHeight;
           }
@@ -93,6 +93,13 @@
         input.focus();
       }
     });
+  }
+
+  // Small models sometimes list people "with missing information" even when told
+  // not to. Those lines add nothing, so hide them.
+  const filler = /(missing information|no information|not mentioned|not in the shortlist|no mention)/i;
+  function clean(t) {
+    return t.split("\n").filter((l) => !(/^\s*[*\-•]/.test(l) && filler.test(l))).join("\n");
   }
 
   function renderSources(box, list) {
