@@ -1,5 +1,5 @@
 # Production overrides. Use with:
-#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+#   COMPOSE_FILE=docker-compose.yml:docker-compose.prod.yml in the server .env, then: docker compose up -d --build
 # In the server's .env set APP_BIND=127.0.0.1 so only the reverse proxy can reach the app.
 services:
   app:

@@ -45,7 +45,7 @@ pipeline {
                             cd '$DEPLOY_PATH'
                             git fetch --quiet origin main
                             git reset --hard origin/main
-                            docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+                            docker compose up -d --build  # compose files come from COMPOSE_FILE in the server .env
                             docker image prune -f
                         "
                     '''
